@@ -1,12 +1,20 @@
-FROM node:lts-alpine
+FROM go:latest as builder
 
-WORKDIR /app
+ENV CGO_ENABLED=0
 
-COPY package*.json ./
+WORKDIR /build
 
-RUN npm ci --only=production
+COPY ./main.go .
 
-COPY . .
+RUN go build -o main ./main.go
 
-EXPOSE 3000
-CMD [ "node", "index.js" ]
+FROM alpine
+
+WORKDIR /dist
+
+COPY --from=builder /builder/main .
+
+COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /opt/zoneinfo.zip
+ENV ZONEINFO /opt/zoneinfo.zip
+
+CMD ["/dist/main"]
